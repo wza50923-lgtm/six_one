@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>六个一 · 语文素材本</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <h1>六个一 · 语文素材本</h1>
+    <div class="meta-row">
+      <input id="meta-name" class="in" placeholder="姓名/班级">
+      <input id="meta-date" type="date" class="in">
+    </div>
+    <div class="btn-row">
+      <button id="settings-open" class="btn ghost">⚙ 设置</button>
+      <button id="export-copy" class="btn ghost">⧉ 复制</button>
+      <button id="export-txt" class="btn">TXT</button>
+      <button id="export-docx" class="btn primary">Word</button>
+      <button id="export-print" class="btn ghost">🖨 打印</button>
+    </div>
+  </div>
+</header>
+<main class="wrap">
+
+  <section class="card">
+    <div class="card-head">
+      <label class="chk big"><input type="checkbox" id="geyan-enabled"><span></span></label>
+      <div class="card-title">① 格言名句 <small>课外名家名言 · 著名而课内少见 · 可 AI 补充</small></div>
+      <button class="ghost" id="geyan-toggle">收起 ▲</button>
+    </div>
+    <div class="card-body" id="geyan-body">
+      <div class="opts">
+        <label>已选 <b id="geyan-count">0</b> 条 / 目标 <span class="target">5</span> 条
+          <input type="number" id="geyan-target" min="1" max="20" title="目标条数（自定义）"></label>
+        <span class="hint">按主题筛选：</span>
+        <div class="chips" id="geyan-themes"></div>
+        <label>主题 <input class="in" id="geyan-ai-theme" placeholder="如：奋斗 / 坚持 / 家国"></label>
+        <button class="btn ghost" id="geyan-ai">🔍 AI 补充格言</button>
+      </div>
+      <div id="geyan-list"></div>
+      <div class="add-row">
+        <input class="in grow" id="geyan-add-text" placeholder="补充一条格言（可选）">
+        <input class="in" id="geyan-add-src" placeholder="出处（可选）">
+        <button class="btn" id="geyan-add">添加</button>
+      </div>
+      <div class="status" id="status-geyan"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <label class="chk big"><input type="checkbox" id="shici-enabled"><span></span></label>
+      <div class="card-title">② 好诗一首 <small>诗或词 · 课外经典 · 附解析 · 可 AI 补充</small></div>
+      <button class="ghost" id="shici-toggle">展开 ▼</button>
+    </div>
+    <div class="card-body" id="shici-body">
+      <div class="opts">
+        <label>体裁 <select id="shici-genre"><option value="词">词</option><option value="诗">诗</option></select></label>
+        <label>全诗 ≤ <input type="number" id="shici-maxlen" min="20" max="200"> 字</label>
+        <label>解析 <input type="number" id="shici-alen" min="50" max="400"> 字</label>
+        <label>关键词 <input class="in" id="shici-ai-theme" placeholder="主题/作者/篇名，如：苏轼 豁达"></label>
+        <button class="btn" id="shici-ai">🔍 AI 补充诗词</button>
+        <span class="hint" style="width:100%">AI 只检索真实名家诗词（不创作）；每首诗旁可点「✍️解析」让 AI 生成解析。</span>
+      </div>
+      <div class="status" id="status-shici"></div>
+      <div id="shici-list"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <label class="chk big"><input type="checkbox" id="meiwen-enabled"><span></span></label>
+      <div class="card-title">③ 美文一段 <small>真实满分作文段落 · 不生成</small></div>
+      <button class="ghost" id="meiwen-toggle">展开 ▼</button>
+    </div>
+    <div class="card-body" id="meiwen-body">
+      <div class="opts">
+        <label>目标 <input type="number" id="meiwen-target" min="50" max="500"> 字</label>
+        <label>主题 <input class="in" id="meiwen-ai-theme" placeholder="如：坚持 / 家国 / 创新"></label>
+        <button class="btn ghost" id="meiwen-ai">🔍 AI 补充美文</button>
+        <span class="hint" style="width:100%">内置为完整段落（AI 整理版会注明来源），可编辑；点链接可核对原文。</span>
+      </div>
+      <div class="status" id="status-meiwen"></div>
+      <div id="meiwen-list"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <label class="chk big"><input type="checkbox" id="sucai-enabled"><span></span></label>
+      <div class="card-title">④ 素材积累 <small>社会现实类 · 一周内时效</small></div>
+      <button class="ghost" id="sucai-toggle">展开 ▼</button>
+    </div>
+    <div class="card-body" id="sucai-body">
+      <div class="opts">
+        <label>标题 <input type="number" id="sucai-tmin" min="4" max="20"> ~ <input type="number" id="sucai-tmax" min="4" max="30"> 字</label>
+        <label>分析 <input type="number" id="sucai-alen" min="30" max="300"> 字</label>
+        <label>更新 <input type="number" id="sucai-count" min="1" max="10" title="一键更新条数"> 条</label>
+        <button class="btn" id="sucai-update">🔄 一键更新素材</button>
+        <button class="btn ghost" id="sucai-hot">🌐 获取近期热点</button>
+        <button class="btn ghost" id="sucai-exportjs">⬇ 导出素材包(.js)</button>
+        <button class="btn ghost" id="sucai-all">☑ 全选</button>
+        <button class="btn ghost" id="sucai-none">☐ 全不选</button>
+        <button class="btn ghost" id="sucai-invert">⇄ 反选</button>
+        <span class="hint" style="width:100%">🔄一键更新＝网页自己拉当天热点 → DeepSeek 按上方字数要求写标题+分析 → 存入本机；没填 Key 可先用「获取近期热点」或手动粘贴。</span>
+      </div>
+      <div id="sucai-hotlist" class="hotbox" style="display:none"></div>
+      <div class="ai-box">
+        <textarea id="sucai-ai-input" rows="3" placeholder="粘贴新闻标题/内容（或点上方热点条目自动填入），AI 将写成 标题+议论分析"></textarea>
+        <div><button class="btn" id="sucai-ai">AI 写分析</button></div>
+      </div>
+      <div class="status" id="status-sucai"></div>
+      <div id="sucai-list"></div>
+    </div>
+  </section>
+
+  <section class="card preview-card">
+    <div class="card-head">
+      <div class="card-title">📄 成稿预览 <small id="status-preview">勾选四类内容后自动生成</small></div>
+      <div class="btn-row">
+        <button id="export-copy2" class="btn ghost">复制</button>
+        <button id="export-txt2" class="btn">TXT</button>
+        <button id="export-docx2" class="btn primary">Word</button>
+      </div>
+    </div>
+    <div class="preview" id="preview"></div>
+  </section>
+
+  <footer class="foot">
+    <span id="save-status"></span>
+    <span class="hint">导出文件建议保存到 sixone/导出文件/ 文件夹统一存放</span>
+    <button class="ghost danger" id="clear-all">清空本机记录</button>
+  </footer>
+</main>
+
+<div class="modal" id="settings-modal">
+  <div class="modal-box">
+    <div class="modal-head"><b>设置（DeepSeek API）</b><button class="ghost" id="settings-close">✕</button></div>
+    <label>API Key（仅存本机浏览器）<input type="password" id="settings-apiKey" placeholder="sk-..."></label>
+    <label>模型 <select id="settings-model"><option value="deepseek-chat">deepseek-chat（快·省）</option><option value="deepseek-reasoner">deepseek-reasoner（慢·深）</option></select></label>
+    <label>接口地址 <input id="settings-baseUrl" value="https://api.deepseek.com"></label>
+    <div class="btn-row">
+      <button class="btn" id="settings-save">保存</button>
+      <button class="btn ghost" id="settings-test">测试连接</button>
+      <button class="btn ghost danger" id="settings-clear">清空 Key</button>
+    </div>
+    <div class="status" id="settings-status"></div>
+    <div class="note">🔒 安全说明：Key 只保存在<b>本机浏览器</b>（localStorage），不会写入任何文件；程序直连 DeepSeek 官方接口，不经第三方服务器；离开前可一键清空；请勿在公共电脑保存 Key、勿截图外发。单次生成成本约不足 1 分钱，建议在 DeepSeek 平台设置余额提醒。</div>
+  </div>
+</div>
+
+<script src="data/geyan.js"></script>
+<script src="data/shici.js"></script>
+<script src="data/meiwen.js"></script>
+<script src="data/sucai.js"></script>
+<script src="js/docx.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
