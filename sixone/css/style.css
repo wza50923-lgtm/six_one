@@ -103,3 +103,18 @@ textarea{margin-top:8px}
   .top-inner{flex-direction:column;align-items:stretch}
   .row2{flex-wrap:wrap}
 }
+
+/* ---- 展开/收起：SVG 箭头 + 流畅动画 ---- */
+.chev-btn{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--sub);cursor:pointer;margin-left:auto;padding:0}
+.chev-btn:hover{border-color:var(--pri);color:var(--pri)}
+.chev{transition:transform .3s ease}
+.card.open .chev{transform:rotate(180deg)}
+.card-body{overflow:hidden;transition:max-height .35s ease,padding-top .35s ease,padding-bottom .35s ease,border-color .35s ease}
+.card-body.closed{max-height:0 !important;padding-top:0;padding-bottom:0;border-top:none}
+/* ---- 热点多选 ---- */
+.hot-item{display:flex;align-items:flex-start;gap:8px;text-align:left;border:1px solid var(--line);background:#fff;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--txt)}
+.hot-item:hover{border-color:var(--pri);background:var(--pri-l)}
+.hot-item input{margin-top:3px;flex:none}
+.hot-t{flex:1;min-width:0}
+.hot-meta{color:var(--sub);font-size:11px;white-space:nowrap;flex:none}
+.hotbar{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}

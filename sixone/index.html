@@ -25,11 +25,11 @@
 </header>
 <main class="wrap">
 
-  <section class="card">
+  <section class="card" id="card-geyan">
     <div class="card-head">
       <label class="chk big"><input type="checkbox" id="geyan-enabled"><span></span></label>
       <div class="card-title">① 格言名句 <small>课外名家名言 · 著名而课内少见 · 可 AI 补充</small></div>
-      <button class="ghost" id="geyan-toggle">收起 ▲</button>
+<button class="ghost chev-btn" id="geyan-toggle" aria-label="展开/收起" title="展开/收起"><svg class="chev" viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="card-body" id="geyan-body">
       <div class="opts">
@@ -50,11 +50,11 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="card-shici">
     <div class="card-head">
       <label class="chk big"><input type="checkbox" id="shici-enabled"><span></span></label>
       <div class="card-title">② 好诗一首 <small>诗或词 · 课外经典 · 附解析 · 可 AI 补充</small></div>
-      <button class="ghost" id="shici-toggle">展开 ▼</button>
+<button class="ghost chev-btn" id="shici-toggle" aria-label="展开/收起" title="展开/收起"><svg class="chev" viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="card-body" id="shici-body">
       <div class="opts">
@@ -63,36 +63,38 @@
         <label>解析 <input type="number" id="shici-alen" min="50" max="400"> 字</label>
         <label>关键词 <input class="in" id="shici-ai-theme" placeholder="主题/作者/篇名，如：苏轼 豁达"></label>
         <button class="btn" id="shici-ai">🔍 AI 补充诗词</button>
-        <span class="hint" style="width:100%">AI 只检索真实名家诗词（不创作）；每首诗旁可点「✍️解析」让 AI 生成解析。</span>
+        <div class="chips" id="shici-chips" style="width:100%"></div>
+        <span class="hint" style="width:100%">可点上方建议快速填入，或自己输入主题/作者；AI 只检索真实课外名家诗词（不创作），解析可「🔄不满意」要求重写。</span>
       </div>
       <div class="status" id="status-shici"></div>
       <div id="shici-list"></div>
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="card-meiwen">
     <div class="card-head">
       <label class="chk big"><input type="checkbox" id="meiwen-enabled"><span></span></label>
       <div class="card-title">③ 美文一段 <small>真实满分作文段落 · 不生成</small></div>
-      <button class="ghost" id="meiwen-toggle">展开 ▼</button>
+<button class="ghost chev-btn" id="meiwen-toggle" aria-label="展开/收起" title="展开/收起"><svg class="chev" viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="card-body" id="meiwen-body">
       <div class="opts">
         <label>目标 <input type="number" id="meiwen-target" min="50" max="500"> 字</label>
         <label>主题 <input class="in" id="meiwen-ai-theme" placeholder="如：坚持 / 家国 / 创新"></label>
-        <button class="btn ghost" id="meiwen-ai">🔍 AI 补充美文</button>
-        <span class="hint" style="width:100%">内置为完整段落（AI 整理版会注明来源），可编辑；点链接可核对原文。</span>
+        <button class="btn ghost" id="meiwen-ai">🔍 AI 推荐真实美文</button>
+        <span class="hint" style="width:100%">内置为网上收集的真实原文片段＋来源链接；AI 只推荐真实出处，不生成美文正文。</span>
       </div>
+      <textarea id="meiwen-ai-out" rows="4" readonly placeholder="AI 推荐的【真实】美文出处会显示在这里——打开来源复制正文，粘贴到下方对应段落框"></textarea>
       <div class="status" id="status-meiwen"></div>
       <div id="meiwen-list"></div>
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="card-sucai">
     <div class="card-head">
       <label class="chk big"><input type="checkbox" id="sucai-enabled"><span></span></label>
       <div class="card-title">④ 素材积累 <small>社会现实类 · 一周内时效</small></div>
-      <button class="ghost" id="sucai-toggle">展开 ▼</button>
+<button class="ghost chev-btn" id="sucai-toggle" aria-label="展开/收起" title="展开/收起"><svg class="chev" viewBox="0 0 24 24" width="18" height="18"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     </div>
     <div class="card-body" id="sucai-body">
       <div class="opts">
@@ -102,6 +104,7 @@
         <button class="btn" id="sucai-update">🔄 一键更新素材</button>
         <button class="btn ghost" id="sucai-hot">🌐 获取近期热点</button>
         <button class="btn ghost" id="sucai-exportjs">⬇ 导出素材包(.js)</button>
+        <button class="btn" id="sucai-savefolder">💾 保存到项目文件夹</button>
         <button class="btn ghost" id="sucai-all">☑ 全选</button>
         <button class="btn ghost" id="sucai-none">☐ 全不选</button>
         <button class="btn ghost" id="sucai-invert">⇄ 反选</button>
@@ -140,7 +143,7 @@
   <div class="modal-box">
     <div class="modal-head"><b>设置（DeepSeek API）</b><button class="ghost" id="settings-close">✕</button></div>
     <label>API Key（仅存本机浏览器）<input type="password" id="settings-apiKey" placeholder="sk-..."></label>
-    <label>模型 <select id="settings-model"><option value="deepseek-chat">deepseek-chat（快·省）</option><option value="deepseek-reasoner">deepseek-reasoner（慢·深）</option></select></label>
+    <label>模型 <select id="settings-model"><option value="deepseek-chat">deepseek-chat（快·省）</option><option value="deepseek-v4-flash">deepseek-v4-flash（支持联网搜索）</option><option value="deepseek-reasoner">deepseek-reasoner（慢·深）</option></select></label>
     <label>接口地址 <input id="settings-baseUrl" value="https://api.deepseek.com"></label>
     <div class="btn-row">
       <button class="btn" id="settings-save">保存</button>

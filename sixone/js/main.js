@@ -24,7 +24,7 @@
   function mapItems(k) {
     var d = {
       geyan: function (x) { return { id: x.id, text: x.text, source: x.source, theme: x.theme, checked: false, custom: false }; },
-      shici: function (x) { return { id: x.id, title: x.title, author: x.author, dynasty: x.dynasty, genre: x.genre, body: x.body, analysis: x.analysis, checked: false, custom: false }; },
+      shici: function (x) { return { id: x.id, title: x.title, author: x.author, dynasty: x.dynasty, genre: x.genre, body: x.body, analysis: x.analysis, req: '', checked: false, custom: false }; },
       meiwen: function (x) { return { id: x.id, title: x.title, year: x.year, exam: x.exam, examTopic: x.examTopic, paraType: x.paraType, body: x.body, sourceNote: x.sourceNote, links: x.links || [], req: '', checked: false, custom: false }; },
       sucai: function (x) { return { id: x.id, title: x.title, summary: x.summary || '', category: x.category, date: x.date, source: x.source, link: x.link, req: '', analysis: x.analysis, checked: false, custom: false }; }
     };
@@ -84,6 +84,7 @@
   }
 
   var state = load();
+  var hotCache = [];
 
   /* ---------- 通用渲染辅助 ---------- */
   function badgeHtml(actual, target, min, max, badgeKey) {
@@ -102,13 +103,24 @@
     if (el) el.textContent = msg;
   }
 
+  var SHICI_THEMES = ['豁达', '家国', '田园', '边塞', '友情', '惜时', '咏物', '山水', '羁旅'];
+  var SHICI_AUTHORS = ['苏轼', '李白', '王维', '辛弃疾', '陆游', '杜甫', '李清照', '温庭筠', '杜牧', '柳永'];
+  function renderShiciChips() {
+    var el = $('#shici-chips');
+    if (!el) return;
+    el.innerHTML = '<span class="hint">主题：</span>' + SHICI_THEMES.map(function (t) {
+      return '<button type="button" class="chip" data-shici-chip="theme:' + t + '">' + t + '</button>';
+    }).join('') + '<span class="hint">作者：</span>' + SHICI_AUTHORS.map(function (a) {
+      return '<button type="button" class="chip" data-shici-chip="author:' + a + '">' + a + '</button>';
+    }).join('') + '<button type="button" class="chip" data-shici-chip="random:1">🎲 随机一首</button>';
+  }
+
   /* ---------- 渲染：格言 ---------- */
   function renderGeyan() {
     var sec = state.geyan;
     $('#geyan-enabled').checked = sec.enabled;
     $('#geyan-target').value = sec.target;
-    $('#geyan-body').style.display = (sec.enabled && sec.expanded) ? 'block' : 'none';
-    $('#geyan-toggle').textContent = sec.expanded ? '收起 ▲' : '展开 ▼';
+    applyHeight('geyan', sec.enabled && sec.expanded);
     var themes = ['全部'];
     sec.items.forEach(function (it) { if (themes.indexOf(it.theme) < 0) themes.push(it.theme); });
     $('#geyan-themes').innerHTML = themes.map(function (t) {
@@ -135,22 +147,22 @@
   function renderShici() {
     var sec = state.shici;
     $('#shici-enabled').checked = sec.enabled;
-    $('#shici-body').style.display = (sec.enabled && sec.expanded) ? 'block' : 'none';
-    $('#shici-toggle').textContent = sec.expanded ? '收起 ▲' : '展开 ▼';
+    applyHeight('shici', sec.enabled && sec.expanded);
     $('#shici-genre').value = sec.genre;
     $('#shici-maxlen').value = sec.maxLen;
     $('#shici-alen').value = sec.analysisLen;
+    renderShiciChips();
     if (!sec.items.length) { $('#shici-list').innerHTML = '<div class="empty">暂无诗词</div>'; return; }
     $('#shici-list').innerHTML = sec.items.map(function (it) {
       var n = cnt(it.analysis);
       return '<div class="item' + (it.checked ? ' picked' : '') + '">' +
         '<div class="item-head"><label class="chk"><input type="checkbox" data-shici-check="' + esc(it.id) + '"' + (it.checked ? ' checked' : '') + '><span></span></label>' +
         '<b>' + esc(it.title) + '</b><i>' + esc(it.dynasty ? it.dynasty + '·' : '') + esc(it.author) + '（' + esc(it.genre) + '）</i>' +
-        '<button class="del" data-shici-an="' + esc(it.id) + '">✍️解析</button>' +
         '<button class="del" data-shici-del="' + esc(it.id) + '">删除</button></div>' +
         '<textarea rows="4" data-shici-body="' + esc(it.id) + '" placeholder="诗词正文">' + esc(it.body) + '</textarea>' +
         '<div class="mini-label">解析（字数自定义：目标 ' + sec.analysisLen + ' 字） ' + badgeHtml(n, sec.analysisLen, null, null, 'shici-analysis-' + it.id) + '</div>' +
         '<textarea rows="5" data-shici-analysis="' + esc(it.id) + '" placeholder="100~200 字解析">' + esc(it.analysis) + '</textarea>' +
+        '<div class="row2"><input class="in grow" data-shici-req="' + esc(it.id) + '" value="' + esc(it.req || '') + '" placeholder="解析不满意想改什么？如：多讲手法 / 联系作文用法（可留空）"><button class="btn ghost" data-shici-an="' + esc(it.id) + '">🔄不满意</button></div>' +
         '</div>';
     }).join('');
   }
@@ -160,8 +172,7 @@
     var sec = state.meiwen;
     $('#meiwen-enabled').checked = sec.enabled;
     $('#meiwen-target').value = sec.targetLen;
-    $('#meiwen-body').style.display = (sec.enabled && sec.expanded) ? 'block' : 'none';
-    $('#meiwen-toggle').textContent = sec.expanded ? '收起 ▲' : '展开 ▼';
+    applyHeight('meiwen', sec.enabled && sec.expanded);
     if (!sec.items.length) { $('#meiwen-list').innerHTML = '<div class="empty">暂无美文</div>'; return; }
     $('#meiwen-list').innerHTML = sec.items.map(function (it) {
       var n = cnt(it.body);
@@ -171,7 +182,7 @@
         '<button class="del" data-meiwen-del="' + esc(it.id) + '">删除</button></div>' +
         '<div class="mini-label">正文（目标 ' + sec.targetLen + ' 字） ' + badgeHtml(n, sec.targetLen, null, null, 'meiwen-body-' + it.id) + '</div>' +
         '<textarea rows="6" data-meiwen-body="' + esc(it.id) + '" placeholder="完整美文段落（约200字，可编辑）">' + esc(it.body) + '</textarea>' +
-        '<div class="row2"><input class="in grow" data-meiwen-req="' + esc(it.id) + '" value="' + esc(it.req || '') + '" placeholder="不满意想改什么？如：换个角度 / 更贴合××主题 / 更有文采（可留空）"><button class="btn ghost" data-meiwen-regen="' + esc(it.id) + '">🔄不满意</button></div>' +
+        '<div class="row2"><input class="in grow" data-meiwen-req="' + esc(it.id) + '" value="' + esc(it.req || '') + '" placeholder="想要什么主题/类型的真实美文？（可留空）"><button class="btn ghost" data-meiwen-regen="' + esc(it.id) + '">🔄换推荐</button></div>' +
         (it.sourceNote ? '<div class="note">说明：' + esc(it.sourceNote) + '</div>' : '') +
         (it.links && it.links.length ? '<div class="links">' + it.links.map(function (l) {
           return '<a href="' + esc(l.url) + '" target="_blank" rel="noopener">↗ ' + esc(l.label) + '</a>';
@@ -188,8 +199,7 @@
     $('#sucai-tmax').value = sec.titleMax;
     $('#sucai-alen').value = sec.analysisLen;
     $('#sucai-count').value = sec.updateCount;
-    $('#sucai-body').style.display = (sec.enabled && sec.expanded) ? 'block' : 'none';
-    $('#sucai-toggle').textContent = sec.expanded ? '收起 ▲' : '展开 ▼';
+    applyHeight('sucai', sec.enabled && sec.expanded);
     if (!sec.items.length) { $('#sucai-list').innerHTML = '<div class="empty">暂无素材</div>'; return; }
     $('#sucai-list').innerHTML = sec.items.map(function (it) {
       var tn = cnt(it.title), an = cnt(it.analysis);
@@ -267,7 +277,7 @@
           chunks.push({ text: '素材' + (i + 1) + '：' + it.title + '（' + it.category + '，' + it.date + '）', kind: 'body' });
           if (it.summary) chunks.push({ text: '梗概：' + it.summary, kind: 'body' });
           if (it.analysis) chunks.push({ text: '分析：' + it.analysis, kind: 'body' });
-          if (it.source) chunks.push({ text: '来源：' + it.source + (it.link ? ' ' + it.link : ''), kind: 'small' });
+          if (it.source) chunks.push({ text: '来源：' + it.source, kind: 'small' });
           total.sucai += cnt(it.title) + cnt(it.analysis);
         });
       }
@@ -305,6 +315,38 @@
       }
     });
   }
+  function applyHeight(key, open) {
+    var el = $('#' + key + '-body');
+    if (!el) return;
+    var card = el.closest ? el.closest('.card') : null;
+    if (card) card.classList.toggle('open', !!open);
+    if (open) {
+      el.classList.remove('closed');
+      if (el.style.maxHeight === '0px' || el._h !== key) {
+        el.style.maxHeight = el.scrollHeight + 'px';
+        clearTimeout(el._t);
+        el._t = setTimeout(function () { if (!el.classList.contains('closed')) el.style.maxHeight = 'none'; }, 380);
+      } else {
+        el.style.maxHeight = 'none';
+      }
+      el._h = key;
+    } else {
+      el.style.maxHeight = el.scrollHeight + 'px';
+      void el.offsetHeight;
+      el.classList.add('closed');
+      el.style.maxHeight = '0px';
+      el._h = null;
+    }
+  }
+  function scrollToTop(key) {
+    var list = $('#' + key + '-list');
+    if (list && list.firstElementChild && list.firstElementChild.scrollIntoView) {
+      list.firstElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+  function syncHeights() {
+    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) { applyHeight(k, state[k].enabled && state[k].expanded); });
+  }
   function renderAll() {
     renderGeyan(); renderShici(); renderMeiwen(); renderSucai(); renderMeta(); renderPreview();
   }
@@ -332,6 +374,38 @@
     });
   }
 
+  /* ---------- DeepSeek Responses API（内置 web_search 联网搜索） ---------- */
+  function callResponses(messages, onOk, onErr) {
+    var s = state.settings;
+    if (!s.apiKey) { onErr('尚未填写 API Key…'); return; }
+    var url = (s.baseUrl || 'https://api.deepseek.com').replace(/\/+$/, '') + '/responses';
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + s.apiKey },
+      body: JSON.stringify({ model: s.model || 'deepseek-chat', input: messages, tools: [{ type: 'web_search' }], store: false })
+    }).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error('HTTP ' + r.status + ' ' + t.slice(0, 180)); });
+      return r.json();
+    }).then(function (j) {
+      var text = null;
+      if (j && typeof j.output_text === 'string') text = j.output_text;
+      else if (j && Array.isArray(j.output)) {
+        var last = j.output[j.output.length - 1];
+        if (last && last.type === 'message' && Array.isArray(last.content)) {
+          text = last.content.map(function (c) { return c && c.text ? c.text : ''; }).join('');
+        }
+      } else if (j && j.choices && j.choices[0] && j.choices[0].message) {
+        text = j.choices[0].message.content;
+      }
+      if (!text) throw new Error('返回内容为空');
+      onOk(text, j);
+    }).catch(function (e) {
+      var msg = e.message || String(e);
+      if (msg.indexOf('Failed to fetch') >= 0) msg += '（跨域/网络问题）';
+      onErr('联网搜索失败：' + msg);
+    });
+  }
+
   /* ---------- AI 补充诗词（只检索真实名家作品，不创作）＋ AI 写解析 ---------- */
   function parseShici(text) {
     var get = function (label) {
@@ -354,11 +428,11 @@
     var aLen = +state.shici.analysisLen || 150;
     setStatus('shici', 'AI 检索中…');
     callDeepSeek([
-      { role: 'system', content: '你是高中语文诗词库检索员。根据关键词，提供一首真实存在的名家诗词（严禁创作、严禁编造），要求：著名但**不来自小学/初中/高中语文课本与高考必背篇目**，高中生课内较少接触；若你无法确认是否课内，请在【作者】处注明"待核实"。按以下格式输出：第一行【标题】…；第二行【作者】…；第三行【朝代】…；第四行【体裁】诗或词；第五行开始【正文】…（全文，不含标点与题目不超过 ' + maxLen + ' 字为宜，若原词较长请如实给出）；空一行后【解析】约 ' + aLen + ' 字解析（说明意象、手法及在高考作文中的用法）。' },
+      { role: 'system', content: '你是高中语文诗词库检索员。根据关键词，提供一首真实存在的名家诗词（严禁创作、严禁编造），要求：著名但**不来自小学/初中/高中语文课本与高考必背篇目**，高中生课内较少接触。**【正文】必须是该作品通行版本的原文，逐字一致，严禁改动、润色、扩写或二次创作**；若你无法确保逐字准确，请在【正文】第一行只输出"无法确认原文"并停止输出正文。按以下格式输出：第一行【标题】…；第二行【作者】…；第三行【朝代】…；第四行【体裁】诗或词；第五行开始【正文】…（全文，不含标点与题目不超过 ' + maxLen + ' 字为宜，若原词较长请如实给出）；空一行后【解析】约 ' + aLen + ' 字解析（说明意象、手法及在高考作文中的用法）。' },
       { role: 'user', content: '关键词：' + kw }
     ], function (text) {
       var p = parseShici(text);
-      if (!p.body) { setStatus('shici', '未能解析返回内容，已把原文放入关键词框，可自行处理：'); $('#shici-ai-theme').value = text.slice(0, 400); return; }
+      if (!p.body || p.body.indexOf('无法确认原文') >= 0) { setStatus('shici', 'AI 未能逐字确认该作品原文（已拒绝输出），请换个关键词或自行粘贴权威版本原文。返回内容：' + text.slice(0, 200)); return; }
       state.shici.items.push({
         id: 'ai' + Date.now() + Math.floor(Math.random() * 999),
         title: p.title || kw,
@@ -370,7 +444,8 @@
         checked: true, custom: true, ai: true
       });
       save(); renderShici(); renderPreview();
-      setStatus('shici', '已补充（AI 自知识库检索，请核对原文；可点该诗「✍️解析」重新生成解析）。');
+      scrollToTop('shici');
+      setStatus('shici', '已补充并置顶（AI 自知识库检索，请逐字核对原文是否与通行版本一致；解析可点「🔄不满意」重写）。');
     }, function (err) { setStatus('shici', err); });
   }
   function aiShiciAnalysis(it) {
@@ -378,7 +453,7 @@
     setStatus('shici', '正在为《' + it.title + '》生成解析…');
     callDeepSeek([
       { role: 'system', content: '你是资深高中语文教师。请为下面这首' + (it.genre || '诗') + '写约 ' + aLen + ' 字解析（说明意象、手法、情感与在高考作文中的用法），只输出解析正文。' },
-      { role: 'user', content: (it.title ? '《' + it.title + '》' + (it.author ? '（' + it.author + '）' : '') : '') + '\n' + it.body }
+      { role: 'user', content: (it.title ? '《' + it.title + '》' + (it.author ? '（' + it.author + '）' : '') : '') + '\n' + it.body + (it.req ? '\n修改要求：' + it.req : '') }
     ], function (text) {
       it.analysis = text.trim();
       save(); renderShici(); renderPreview();
@@ -403,8 +478,10 @@
       if (m2) summary = m2[1].trim();
       var m4 = text.match(/【分析】\s*([\s\S]+)$/);
       if (m4) analysis = m4[1].trim();
-      state.sucai.items.push({ id: 'ai' + Date.now() + Math.floor(Math.random() * 999), title: title || 'AI 素材', summary: summary, category: '自定义', date: todayStr(), source: 'AI 分析（基于粘贴内容）', link: '', analysis: analysis, checked: true, custom: true, ai: true });
+      state.sucai.items.unshift({ id: 'ai' + Date.now() + Math.floor(Math.random() * 999), title: title || 'AI 素材', summary: summary, category: '自定义', date: todayStr(), source: 'AI 分析（基于粘贴内容）', link: '', analysis: analysis, checked: true, custom: true, ai: true });
+      state.sucai.expanded = true;
       save(); renderSucai(); renderPreview();
+      scrollToTop('sucai');
       setStatus('sucai', '已生成（含要素，请核对事实后使用）。');
     }, function (err) { setStatus('sucai', err); });
   }
@@ -422,60 +499,37 @@
         var arr = extractJsonArray(text);
         if (!Array.isArray(arr) || !arr.length) throw new Error('not-array');
         arr.forEach(function (it) {
-          state.geyan.items.push({ id: 'gai' + Date.now() + Math.floor(Math.random() * 999), text: String(it.text || ''), source: String(it.source || 'AI 检索'), theme: String(it.theme || theme), checked: true, custom: true, ai: true });
+          state.geyan.items.unshift({ id: 'gai' + Date.now() + Math.floor(Math.random() * 999), text: String(it.text || ''), source: String(it.source || 'AI 检索'), theme: String(it.theme || theme), checked: true, custom: true, ai: true });
         });
         save(); renderGeyan(); renderPreview();
-        setStatus('geyan', '已补充 ' + arr.length + ' 条（AI 检索，请核对出处后使用）。');
+        scrollToTop('geyan');
+        setStatus('geyan', '已补充 ' + arr.length + ' 条并置顶（AI 检索，请核对出处后使用）。');
       } catch (e) {
         setStatus('geyan', '返回格式异常，请重试或手动添加。');
       }
     }, function (err) { setStatus('geyan', err); });
   }
 
-  /* ---------- AI 补充美文（完整段落，整理版会注明） ---------- */
-  function aiMeiwen() {
-    var theme = $('#meiwen-ai-theme').value.trim();
-    if (!theme) { setStatus('meiwen', '请先输入主题（如：坚持/家国/创新）。'); return; }
-    var n = state.meiwen.targetLen || 200;
-    setStatus('meiwen', 'AI 检索/整理中…');
-    callDeepSeek([
-      { role: 'system', content: '你是高考作文美文顾问。用户给出主题，请输出两行：第一行【来源】注明出处（如为真实满分作文/名篇请写篇目与年份；若无法确认真实出处，写"AI整理版·模拟满分作文风格"）；第二行【正文】约 ' + n + ' 字的完整论述性段落（论点清晰、引用或举例具体、语言可入高考作文，必须是完整一段，禁止只有几个字）。不要输出其它内容。' },
-      { role: 'user', content: '主题：' + theme + '；字数：约 ' + n + ' 字' }
-    ], function (text) {
-      var src = '', body = text;
-      var m1 = text.match(/【来源】\s*([^\n]+)/);
-      if (m1) src = m1[1].trim();
-      var m2 = text.match(/【正文】\s*([\s\S]*)$/);
-      if (m2) body = m2[1].trim();
-      state.meiwen.items.push({
-        id: 'mai' + Date.now() + Math.floor(Math.random() * 999),
-        title: theme + '·美文', year: '', exam: 'AI 补充', examTopic: '', paraType: '主体段',
-        body: body, sourceNote: src || 'AI整理版·模拟满分作文风格（请核对）', links: [],
-        checked: true, custom: true, ai: true
-      });
-      save(); renderMeiwen(); renderPreview();
-      setStatus('meiwen', '已补充完整段落（' + cnt(body) + ' 字），可在文本框继续编辑。');
-    }, function (err) { setStatus('meiwen', err); });
+  /* ---------- AI 推荐真实美文出处（不生成正文） ---------- */
+  function showMeiwenSource(text) {
+    var el = $('#meiwen-ai-out');
+    if (el) el.value = text;
+    setStatus('meiwen', '已推荐出处：打开来源复制【真实原文】正文，粘贴到对应段落框即可。');
   }
+  function aiMeiwenSource(extra) {
+    var theme = $('#meiwen-ai-theme').value.trim() || '坚持';
+    setStatus('meiwen', 'AI 检索真实篇目中…');
+    callDeepSeek([
+      { role: 'system', content: '你是高考作文美文检索员。请基于主题「' + theme + '」，推荐 2~3 篇【真实存在】的高考满分作文或名家名篇（优先 2026 全国Ⅰ卷广东），输出每篇一行：篇目（年份/卷别）｜出处或获取方式（搜索引擎关键词或网址）｜一句话说明为何值得摘录。**不要写正文**，严禁编造篇目；不确定的标注"待核实"。' + (extra ? '附加要求：' + extra : '') },
+      { role: 'user', content: '主题：' + theme }
+    ], function (text) { showMeiwenSource(text); }, function (err) { setStatus('meiwen', err); });
+  }
+  function aiMeiwen() { aiMeiwenSource(); }
 
   /* ---------- 不满意重新生成：美文 / 素材 ---------- */
   function aiMeiwenRegen(it) {
     var theme = (it.title || '').replace(/·美文$/, '') || '坚持';
-    var n = state.meiwen.targetLen || 200;
-    setStatus('meiwen', '正在重新生成《' + it.title + '》…');
-    callDeepSeek([
-      { role: 'system', content: '你是高考作文美文顾问。主题：' + theme + '。请输出两行：第一行【来源】注明出处（真实篇目写篇目与年份；无法确认真实出处写"AI整理版·模拟满分作文风格"）；第二行【正文】约 ' + n + ' 字的完整论述性段落（论点清晰、引用或举例具体、可入高考作文，必须完整一段）。不要输出其它内容。' },
-      { role: 'user', content: (it.req ? '修改要求：' + it.req + '。' : '') + '请重新生成一段更好的。' }
-    ], function (text) {
-      var src = '', body = text;
-      var m1 = text.match(/【来源】\s*([^\n]+)/);
-      if (m1) src = m1[1].trim();
-      var m2 = text.match(/【正文】\s*([\s\S]*)$/);
-      if (m2) body = m2[1].trim();
-      it.body = body; it.sourceNote = src || 'AI整理版·模拟满分作文风格（请核对）';
-      save(); renderMeiwen(); renderPreview();
-      setStatus('meiwen', '已重新生成（' + cnt(body) + ' 字），可继续编辑。');
-    }, function (err) { setStatus('meiwen', err); });
+    aiMeiwenSource((it.req ? '想换更贴合「' + it.req + '」的真实篇目。' : '换个主题接近的真实篇目。') + '当前条目：' + it.title);
   }
   function aiSucaiRegen(it) {
     var tMin = +state.sucai.titleMin || 10, tMax = +state.sucai.titleMax || 20;
@@ -503,7 +557,7 @@
       .then(function (j) {
         var news = j && j.data && j.data.news;
         if (!Array.isArray(news) || !news.length) throw new Error('empty');
-        return news.map(function (x) { return { title: String(x).replace(/^\d+[.、\s]+/, ''), url: '', hot: '' }; });
+        return news.map(function (x) { return { title: String(x).replace(/^\d+[.、\s]+/, ''), url: '', hot: '', date: todayStr(), source: '60s新闻' }; });
       })
       .catch(function () {
         return fetch('https://api.vvhan.com/api/hotlist/all', { mode: 'cors' })
@@ -511,16 +565,43 @@
           .then(function (j) {
             var list = (j && j.data) || [];
             if (!Array.isArray(list) || !list.length) throw new Error('empty');
-            return list.map(function (x) { return { title: x.title || x.name || '', url: x.url || '', hot: x.hot || '' }; });
+            return list.map(function (x) { return { title: x.title || x.name || '', url: x.url || '', hot: x.hot || '', date: todayStr(), source: 'vvhan热榜' }; });
           })
           .catch(function () { return null; });
       });
   }
+  function fetchHotTopics() {
+    return new Promise(function (resolve) {
+      if (state.settings.apiKey) {
+        callResponses([
+          { role: 'system', content: '你是新闻检索助手。请使用 web_search 搜索最近 3 天国内重要的社会现实类新闻热点（政治/经济/文化/科技/社会），输出一个 JSON 数组（不要其它文字），每项：{"title":"标题","date":"精确到日的日期如2026-08-16","source":"媒体名称","url":"来源链接"}，最多 12 条。' },
+          { role: 'user', content: '搜索今日热点新闻' }
+        ], function (text) {
+          try {
+            var arr = extractJsonArray(text);
+            if (Array.isArray(arr) && arr.length) resolve(arr.map(function (x) {
+              return { title: String(x.title || ''), date: String(x.date || todayStr()), source: String(x.source || 'AI检索'), url: String(x.url || '') };
+            }));
+            else throw new Error('empty');
+          } catch (e) { resolve(null); }
+        }, function () { resolve(null); });
+      } else { resolve(null); }
+    }).then(function (list) {
+      if (list && list.length) return list;
+      return fetchNewsList();
+    }).then(function (list) {
+      return (list || []).map(function (x) {
+        if (!x.date) x.date = todayStr();
+        if (!x.source) x.source = '热榜';
+        return x;
+      });
+    });
+  }
   function fetchHotlist() {
-    setStatus('sucai', '正在获取热点…');
-    fetchNewsList().then(function (list) {
+    setStatus('sucai', '正在获取热点（联网搜索优先）…');
+    fetchHotTopics().then(function (list) {
       if (list && list.length) showHotlist(list);
-      else setStatus('sucai', '热榜接口不可用（file:// 打开时可能被浏览器跨域限制），请改为手动粘贴新闻。');
+      else setStatus('sucai', '热点获取失败（未填 API Key 或接口受限），请改为手动粘贴新闻。');
     });
   }
 
@@ -537,23 +618,24 @@
     if (!state.settings.apiKey) { setStatus('sucai', '一键更新需要 API Key：点右上角「设置」填入（Key 仅存本机浏览器）。'); return; }
     var n = state.sucai.updateCount || 5;
     setStatus('sucai', '正在抓取今日热点并生成素材（约 10~30 秒，单次成本不足 1 分钱）…');
-    fetchNewsList().then(function (list) {
+    fetchHotTopics().then(function (list) {
       if (!list || !list.length) { setStatus('sucai', '热榜接口不可用（file:// 跨域限制），请手动粘贴新闻后点「AI 写分析」。'); return; }
       var tMin = state.sucai.titleMin || 10, tMax = state.sucai.titleMax || 20, aLen = state.sucai.analysisLen || 75;
       var top = list.slice(0, 30).map(function (x, i) { return (i + 1) + '. ' + x.title; }).join('\n');
       callDeepSeek([
-        { role: 'system', content: '你是高考作文素材库主编。以下是今日抓取的新闻/热点标题：\n' + top + '\n\n请从中挑选 ' + n + ' 条最适合作高考议论文素材的社会现实类新闻（政治/经济/文化/科技/社会），只输出一个 JSON 数组（不要任何其它文字、不要代码块标记），每项格式：{"title":"标题' + tMin + '~' + tMax + '字","category":"科技/经济/文化/社会/政策","summary":"梗概约30字，含六要素（时间/地点/人物/起因/经过/结果）","analysis":"约' + aLen + '字议论性分析，观点鲜明、可直接写入议论文","source":"今日热点"}。要求：只基于给定标题，严禁编造标题中不存在的事实细节。' },
+        { role: 'system', content: '你是高考作文素材库主编。以下是今日抓取的新闻/热点标题：\n' + top + '\n\n请从中挑选 ' + n + ' 条最适合作高考议论文素材的社会现实类新闻（政治/经济/文化/科技/社会），只输出一个 JSON 数组（不要任何其它文字、不要代码块标记），每项格式：{"title":"标题' + tMin + '~' + tMax + '字","category":"科技/经济/文化/社会/政策","summary":"梗概约30字，含六要素（时间/地点/人物/起因/经过/结果）","analysis":"约' + aLen + '字议论性分析，观点鲜明、可直接写入议论文","date":"用对应条目的日期","source":"用对应条目的来源"}。要求：只基于给定标题，严禁编造标题中不存在的事实细节。' },
         { role: 'user', content: '请生成 ' + n + ' 条素材。' }
       ], function (text) {
         try {
           var arr = extractJsonArray(text);
           if (!Array.isArray(arr) || !arr.length) throw new Error('not-array');
+          var added = [];
           arr.forEach(function (it) {
-            state.sucai.items.push({
+            added.push({
               id: 'upd' + Date.now() + Math.floor(Math.random() * 999),
               title: String(it.title || '').slice(0, 50),
               category: String(it.category || '自定义'),
-              date: todayStr(),
+              date: String(it.date || todayStr()),
               source: String(it.source || 'AI·热榜更新'),
               link: '',
               summary: String(it.summary || ''),
@@ -561,8 +643,11 @@
               checked: true, custom: true, ai: true
             });
           });
+          state.sucai.items = added.concat(state.sucai.items);
+          state.sucai.expanded = true;
           save(); renderSucai(); renderPreview();
-          setStatus('sucai', '已更新 ' + arr.length + ' 条素材（存于本机浏览器；想同步到别的电脑请点「导出素材包(.js)」）。');
+          scrollToTop('sucai');
+          setStatus('sucai', '已更新 ' + arr.length + ' 条素材并置顶显示（存于本机；可点「💾 保存到项目文件夹」永久保存）。');
         } catch (e) {
           setStatus('sucai', 'AI 返回格式异常，已把原文填入下方输入框，可手动整理或重试：');
           $('#sucai-ai-input').value = text;
@@ -572,31 +657,88 @@
   }
 
   /* ---------- 导出当前素材为可替换的 sucai.js ---------- */
-  function exportSucaiJs() {
+  function buildSucaiJsContent() {
     var items = state.sucai.items.map(function (it) {
       return { id: it.id, title: it.title || '', summary: it.summary || '', category: it.category || '', date: it.date || todayStr(), source: it.source || '', link: it.link || '', analysis: it.analysis || '' };
     });
-    var content = '// 素材数据：由「六个一 · 语文素材本」导出（' + todayStr() + '）\n' +
-      '// 使用方法：用本文件替换 sixone/data/sucai.js，下次打开即成为内置素材\n' +
+    return '// 素材数据：由「六个一 · 语文素材本」导出（' + todayStr() + '）\n' +
+      '// 使用方法：替换 sixone/data/sucai.js，或在程序里用「💾 保存到项目文件夹」直接写入\n' +
       'window.SIXONE_DATA = window.SIXONE_DATA || {};\n' +
       'window.SIXONE_DATA.sucai = ' + JSON.stringify(items, null, 2) + ';\n';
-    download('sucai_' + todayStr().replace(/-/g, '') + '.js', content, 'text/javascript;charset=utf-8');
+  }
+  function exportSucaiJs() {
+    download('sucai_' + todayStr().replace(/-/g, '') + '.js', buildSucaiJsContent(), 'text/javascript;charset=utf-8');
     setStatus('sucai', '素材包已导出（见下载文件），用它替换 data/sucai.js 即可永久保存。');
+  }
+  function saveSucaiToFolder() {
+    if (!window.showDirectoryPicker) {
+      setStatus('sucai', '当前浏览器不支持直接写入文件夹（需新版 Chrome/Edge）：请用「⬇ 导出素材包(.js)」下载后替换 data/sucai.js。');
+      return;
+    }
+    setStatus('sucai', '请在弹出的窗口中选择「sixone/data」文件夹（或项目根目录）…');
+    window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) {
+      return dir.getFileHandle('sucai.js', { create: true }).then(function (fh) {
+        return fh.createWritable().then(function (w) {
+          return w.write(buildSucaiJsContent()).then(function () { return w.close(); });
+        });
+      });
+    }).then(function () {
+      setStatus('sucai', '✓ 已写入所选文件夹的 sucai.js！若选的是 sixone/data，则已更新项目内置素材。');
+    }).catch(function (e) {
+      if (e && e.name === 'AbortError') setStatus('sucai', '已取消保存。');
+      else setStatus('sucai', '保存失败：' + (e && e.message ? e.message.slice(0, 80) : String(e)));
+    });
   }
 
   function showHotlist(list) {
+    hotCache = list;
     var box = $('#sucai-hotlist');
     box.style.display = 'block';
-    box.innerHTML = '<div class="mini-label">点击条目 → 自动填入下方 AI 分析框（' + list.length + ' 条热点）</div>' +
+    box.innerHTML = '<div class="mini-label">勾选要处理的条目（可多选）→ 点「批量生成素材」；每条已标明【日期 · 来源】</div>' +
       '<div class="hotlist">' + list.slice(0, 40).map(function (it, i) {
-        return '<button type="button" class="hot-item" data-title="' + esc(it.title) + '">' + (i + 1) + '. ' + esc(it.title) + (it.hot ? ' <em>' + esc(it.hot) + '</em>' : '') + '</button>';
-      }).join('') + '</div>';
-    $$('.hot-item', box).forEach(function (b) {
-      b.addEventListener('click', function () {
-        $('#sucai-ai-input').value = b.getAttribute('data-title');
-        $('#sucai-ai-input').focus();
-      });
-    });
+        return '<label class="hot-item"><input type="checkbox" data-hot="' + i + '"><span class="hot-t">' + (i + 1) + '. ' + esc(it.title) + '</span><span class="hot-meta">' + esc(it.date) + ' · ' + esc(it.source) + '</span></label>';
+      }).join('') + '</div>' +
+      '<div class="hotbar"><button class="btn" id="sucai-hot-batch">⚡ 批量生成素材</button>' +
+      '<button class="btn ghost" id="sucai-hot-close">收起</button></div>';
+  }
+  function aiSucaiBatch(items) {
+    if (!items.length) { setStatus('sucai', '请先勾选热点条目。'); return; }
+    var tMin = +state.sucai.titleMin || 10, tMax = +state.sucai.titleMax || 20;
+    var aLen = +state.sucai.analysisLen || 75;
+    setStatus('sucai', '批量生成 ' + items.length + ' 条素材中…');
+    var lines = items.map(function (it, i) { return (i + 1) + '.【' + it.date + '】【' + it.source + '】' + it.title; }).join('\n');
+    callDeepSeek([
+      { role: 'system', content: '你是高考作文素材库主编。请把下列新闻条目改写为作文素材，只输出一个 JSON 数组（不要其它文字），每项：{"title":"标题' + tMin + '~' + tMax + '字","summary":"梗概约30字含六要素（时间/地点/人物/起因/经过/结果）","analysis":"约' + aLen + '字议论性分析，可直接入文","date":"用条目给出的日期","source":"用条目给出的来源"}。严禁编造，只能基于给定条目。\n条目：\n' + lines },
+      { role: 'user', content: '请生成 ' + items.length + ' 条素材。' }
+    ], function (text) {
+      try {
+        var arr = extractJsonArray(text);
+        if (!Array.isArray(arr) || !arr.length) throw new Error('not-array');
+        var added = [];
+        arr.forEach(function (it, i) {
+          var src = items[i] || {};
+          added.push({
+            id: 'hot' + Date.now() + Math.floor(Math.random() * 999),
+            title: String(it.title || src.title || '').slice(0, 50),
+            summary: String(it.summary || ''),
+            category: '热点',
+            date: String(it.date || src.date || todayStr()),
+            source: String(it.source || src.source || 'AI·热榜'),
+            link: src.url || '',
+            analysis: String(it.analysis || ''),
+            checked: true, custom: true, ai: true
+          });
+        });
+        state.sucai.items = added.concat(state.sucai.items);
+        state.sucai.expanded = true;
+        save(); renderSucai(); renderPreview();
+        scrollToTop('sucai');
+        setStatus('sucai', '已批量生成 ' + arr.length + ' 条素材并置顶，可点「💾 保存到项目文件夹」写入 data/sucai.js。');
+      } catch (e) {
+        setStatus('sucai', '返回格式异常，请重试；或改为单条处理。');
+        $('#sucai-ai-input').value = text.slice(0, 500);
+      }
+    }, function (err) { setStatus('sucai', err); });
   }
 
   /* ---------- 导出 ---------- */
@@ -735,6 +877,7 @@
     t('#sucai-hot', fetchHotlist);
     t('#sucai-update', refreshSucai);
     t('#sucai-exportjs', exportSucaiJs);
+    t('#sucai-savefolder', saveSucaiToFolder);
     t('#sucai-all', function () { state.sucai.items.forEach(function (i) { i.checked = true; }); save(); renderSucai(); renderPreview(); });
     t('#sucai-none', function () { state.sucai.items.forEach(function (i) { i.checked = false; }); save(); renderSucai(); renderPreview(); });
     t('#sucai-invert', function () { state.sucai.items.forEach(function (i) { i.checked = !i.checked; }); save(); renderSucai(); renderPreview(); });
@@ -773,6 +916,7 @@
       var el = e.target, d = el.dataset || {};
       if (d.shiciBody) { var it = findItem('shici', d.shiciBody); if (it) { it.body = el.value; save(); renderPreview(); } }
       else if (d.shiciAnalysis) { var it2 = findItem('shici', d.shiciAnalysis); if (it2) { it2.analysis = el.value; save(); renderPreview(); } }
+      else if (d.shiciReq) { var itq = findItem('shici', d.shiciReq); if (itq) { itq.req = el.value; save(); } }
       else if (d.meiwenBody) { var it3 = findItem('meiwen', d.meiwenBody); if (it3) { it3.body = el.value; save(); renderPreview(); } }
       else if (d.sucaiTitle) { var it4 = findItem('sucai', d.sucaiTitle); if (it4) { it4.title = el.value; save(); renderPreview(); } }
       else if (d.sucaiAnalysis) { var it5 = findItem('sucai', d.sucaiAnalysis); if (it5) { it5.analysis = el.value; save(); renderPreview(); } }
@@ -798,6 +942,32 @@
       var el = e.target;
       var th = el.getAttribute && el.getAttribute('data-theme');
       if (th) { state.geyan.filter = th; renderGeyan(); return; }
+      var sc = el.getAttribute && el.getAttribute('data-shici-chip');
+      if (sc) {
+        var ci = sc.indexOf(':');
+        var ck = sc.slice(0, ci), cv = sc.slice(ci + 1);
+        var inp = $('#shici-ai-theme');
+        if (inp) {
+          if (ck === 'random') {
+            var ct = SHICI_THEMES[Math.floor(Math.random() * SHICI_THEMES.length)];
+            var ca = SHICI_AUTHORS[Math.floor(Math.random() * SHICI_AUTHORS.length)];
+            inp.value = ca + ' ' + ct;
+          } else inp.value = cv;
+          inp.focus();
+          setStatus('shici', '已填入「' + (ck === 'random' ? inp.value : cv) + '」，点「🔍 AI 补充诗词」开始检索。');
+        }
+        return;
+      }
+      if (el.id === 'sucai-hot-batch') {
+        var chosen = [];
+        $$('#sucai-hotlist input[data-hot]:checked').forEach(function (cb) {
+          var hi = +cb.getAttribute('data-hot');
+          if (hotCache[hi]) chosen.push(hotCache[hi]);
+        });
+        aiSucaiBatch(chosen);
+        return;
+      }
+      if (el.id === 'sucai-hot-close') { $('#sucai-hotlist').style.display = 'none'; return; }
       var sa = el.getAttribute && el.getAttribute('data-shici-an');
       if (sa) { var it0 = findItem('shici', sa); if (it0) aiShiciAnalysis(it0); return; }
       var mr = el.getAttribute && el.getAttribute('data-meiwen-regen');
@@ -832,5 +1002,6 @@
     bindDelegated();
     renderAll();
     save();
+    window.addEventListener('resize', syncHeights);
   });
 })();
