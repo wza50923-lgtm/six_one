@@ -16,6 +16,7 @@
     </div>
     <div class="btn-row">
       <button id="oneclick" class="btn primary">✨ 一键生成（格言5+诗词1+素材5）</button>
+      <button id="uncheck-all" class="btn ghost">✕ 取消全部选择</button>
       <button id="settings-open" class="btn ghost">⚙ 设置</button>
       <button id="export-copy" class="btn ghost">⧉ 复制</button>
       <button id="export-txt" class="btn">TXT</button>
@@ -139,6 +140,15 @@
     <button class="ghost danger" id="clear-all">清空本机记录</button>
   </footer>
 </main>
+
+<div class="done-overlay" id="done-overlay">
+  <div class="done-box">
+    <svg class="done-check" viewBox="0 0 52 52"><circle cx="26" cy="26" r="24" fill="none"/><path fill="none" d="M14 27l8 8 16-16"/></svg>
+    <h3>一键生成完成！</h3>
+    <p id="done-summary">格言 5 条 · 诗词 1 首 · 素材 5 条，已置顶并自动勾选</p>
+    <button class="btn primary" id="done-close">继续编辑</button>
+  </div>
+</div>
 
 <div class="modal" id="settings-modal">
   <div class="modal-box">

@@ -122,7 +122,7 @@
     var sec = state.geyan;
     $('#geyan-enabled').checked = sec.enabled;
     $('#geyan-target').value = sec.target;
-    applyHeight('geyan', sec.enabled && sec.expanded);
+    applyHeight('geyan', sec.expanded);
     var themes = ['全部'];
     sec.items.forEach(function (it) { if (themes.indexOf(it.theme) < 0) themes.push(it.theme); });
     $('#geyan-themes').innerHTML = themes.map(function (t) {
@@ -149,7 +149,7 @@
   function renderShici() {
     var sec = state.shici;
     $('#shici-enabled').checked = sec.enabled;
-    applyHeight('shici', sec.enabled && sec.expanded);
+    applyHeight('shici', sec.expanded);
     $('#shici-genre').value = sec.genre;
     $('#shici-maxlen').value = sec.maxLen;
     $('#shici-alen').value = sec.analysisLen;
@@ -174,7 +174,7 @@
     var sec = state.meiwen;
     $('#meiwen-enabled').checked = sec.enabled;
     $('#meiwen-target').value = sec.targetLen;
-    applyHeight('meiwen', sec.enabled && sec.expanded);
+    applyHeight('meiwen', sec.expanded);
     if (!sec.items.length) { $('#meiwen-list').innerHTML = '<div class="empty">暂无美文</div>'; return; }
     $('#meiwen-list').innerHTML = sec.items.map(function (it) {
       var n = cnt(it.body);
@@ -201,7 +201,7 @@
     $('#sucai-tmax').value = sec.titleMax;
     $('#sucai-alen').value = sec.analysisLen;
     $('#sucai-count').value = sec.updateCount;
-    applyHeight('sucai', sec.enabled && sec.expanded);
+    applyHeight('sucai', sec.expanded);
     if (!sec.items.length) { $('#sucai-list').innerHTML = '<div class="empty">暂无素材</div>'; return; }
     $('#sucai-list').innerHTML = sec.items.map(function (it) {
       var tn = cnt(it.title), an = cnt(it.analysis);
@@ -347,10 +347,14 @@
     }
   }
   function syncHeights() {
-    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) { applyHeight(k, state[k].enabled && state[k].expanded); });
+    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) { applyHeight(k, state[k].expanded); });
   }
   function renderAll() {
     renderGeyan(); renderShici(); renderMeiwen(); renderSucai(); renderMeta(); renderPreview();
+    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) {
+      var c = $('#card-' + k);
+      if (c) c.classList.toggle('disabled', !state[k].enabled);
+    });
   }
 
   /* ---------- DeepSeek 调用 ---------- */
@@ -940,16 +944,34 @@
       }, function () { setStatus('preview', '素材生成失败。'); stepDone(); });
     });
   }
+  function uncheckAll() {
+    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) {
+      (state[k].items || []).forEach(function (it) { it.checked = false; });
+    });
+    save(); renderAll();
+    setStatus('preview', '已取消全部选择。');
+  }
+  function showDone(summary) {
+    var ov = $('#done-overlay');
+    if (!ov) return;
+    var sm = $('#done-summary');
+    if (sm) sm.textContent = summary;
+    ov.classList.add('show');
+    clearTimeout(ov._t);
+    ov._t = setTimeout(function () { ov.classList.remove('show'); }, 4000);
+  }
   function oneClickGenerate() {
     if (!state.settings.apiKey) { setStatus('preview', '一键生成需要 API Key：点右上角「设置」填入后重试。'); return; }
     setStatus('preview', '一键生成开始（约 30~60 秒）…');
-    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); scrollToTop('geyan'); }); }); });
+    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); scrollToTop('geyan'); showDone('格言 5 条 · 诗词 1 首 · 素材 5 条，已置顶并自动勾选'); }); }); });
   }
 
   /* ---------- 事件：静态控件 ---------- */
   function attachStaticEvents() {
     var t = function (id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); };
     t('#oneclick', oneClickGenerate);
+    t('#uncheck-all', uncheckAll);
+    t('#done-close', function () { var ov = $('#done-overlay'); if (ov) ov.classList.remove('show'); });
     t('#settings-open', openSettings);
     t('#settings-close', closeSettings);
     t('#settings-save', saveSettings);
