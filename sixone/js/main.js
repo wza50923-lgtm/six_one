@@ -234,20 +234,17 @@
     chunks.push({ text: '日期：' + (state.meta.date || todayStr()), kind: 'subtitle' });
     var total = { geyan: 0, shici: 0, meiwen: 0, sucai: 0 };
     var g = state.geyan;
-    if (g.enabled) {
-      var gs = g.items.filter(function (i) { return i.checked; });
-      if (gs.length) {
+    var gs = g.items.filter(function (i) { return i.checked; });
+    if (gs.length) {
         chunks.push({ text: '一、格言名句', kind: 'h' });
         gs.forEach(function (it, i) {
           chunks.push({ text: (i + 1) + '. ' + it.text + ' ——' + it.source + (it.theme ? '（适用：' + it.theme + '）' : ''), kind: 'body' });
           total.geyan += cnt(it.text);
         });
       }
-    }
     var s = state.shici;
-    if (s.enabled) {
-      var ss = s.items.filter(function (i) { return i.checked; });
-      if (ss.length) {
+    var ss = s.items.filter(function (i) { return i.checked; });
+    if (ss.length) {
         chunks.push({ text: '二、好诗一首', kind: 'h' });
         ss.forEach(function (it, i) {
           chunks.push({ text: (ss.length > 1 ? '第' + (i + 1) + '首：' : '') + it.title + '（' + (it.dynasty || '') + (it.dynasty ? '·' : '') + it.author + '·' + it.genre + '）', kind: 'body' });
@@ -256,11 +253,9 @@
           total.shici += cnt(it.body) + cnt(it.analysis);
         });
       }
-    }
     var m = state.meiwen;
-    if (m.enabled) {
-      var ms = m.items.filter(function (i) { return i.checked; });
-      if (ms.length) {
+    var ms = m.items.filter(function (i) { return i.checked; });
+    if (ms.length) {
         chunks.push({ text: '三、美文一段', kind: 'h' });
         ms.forEach(function (it, i) {
           chunks.push({ text: (ms.length > 1 ? '段落' + (i + 1) + '：' : '') + it.title + '（' + it.exam + '，' + it.year + '年，' + it.paraType + '）', kind: 'body' });
@@ -269,11 +264,9 @@
           total.meiwen += cnt(it.body);
         });
       }
-    }
     var c = state.sucai;
-    if (c.enabled) {
-      var cs = c.items.filter(function (i) { return i.checked; });
-      if (cs.length) {
+    var cs = c.items.filter(function (i) { return i.checked; });
+    if (cs.length) {
         chunks.push({ text: '四、素材积累', kind: 'h' });
         cs.forEach(function (it, i) {
           chunks.push({ text: '素材' + (i + 1) + '：' + it.title + '（' + it.category + '，' + it.date + '）', kind: 'body' });
@@ -283,7 +276,6 @@
           total.sucai += cnt(it.title) + cnt(it.analysis);
         });
       }
-    }
     var all = total.geyan + total.shici + total.meiwen + total.sucai;
     chunks.push({ text: '字数统计：格言 ' + total.geyan + ' 字｜诗词（含解析）' + total.shici + ' 字｜美文 ' + total.meiwen + ' 字｜素材 ' + total.sucai + ' 字｜合计 ' + all + ' 字', kind: 'small' });
     return chunks;
@@ -351,10 +343,6 @@
   }
   function renderAll() {
     renderGeyan(); renderShici(); renderMeiwen(); renderSucai(); renderMeta(); renderPreview();
-    ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) {
-      var c = $('#card-' + k);
-      if (c) c.classList.toggle('disabled', !state[k].enabled);
-    });
   }
 
   /* ---------- DeepSeek 调用 ---------- */
@@ -486,6 +474,7 @@
       if (m4) analysis = m4[1].trim();
       state.sucai.items.unshift({ id: 'ai' + Date.now() + Math.floor(Math.random() * 999), title: title || 'AI 素材', summary: summary, category: '自定义', date: todayStr(), source: 'AI 分析（基于粘贴内容）', link: '', analysis: analysis, checked: true, custom: true, ai: true });
       recordUsed([title]);
+      state.sucai.enabled = true;
       state.sucai.expanded = true;
       save(); renderSucai(); renderPreview();
       scrollToTop('sucai');
@@ -672,7 +661,8 @@
           });
           state.sucai.items = added.concat(state.sucai.items);
           recordUsed(added.map(function (x) { return x.title; }).concat(list.map(function (x) { return x.title; })));
-          state.sucai.expanded = true;
+          state.sucai.enabled = true;
+      state.sucai.expanded = true;
           save(); renderSucai(); renderPreview();
           scrollToTop('sucai');
           setStatus('sucai', '已更新 ' + arr.length + ' 条素材并置顶显示（存于本机；可点「💾 保存到项目文件夹」永久保存）。');
@@ -761,7 +751,8 @@
         });
         state.sucai.items = added.concat(state.sucai.items);
         recordUsed(added.map(function (x) { return x.title; }).concat(items.map(function (x) { return x.title; })));
-        state.sucai.expanded = true;
+        state.sucai.enabled = true;
+      state.sucai.expanded = true;
         save(); renderSucai(); renderPreview();
         scrollToTop('sucai');
         setStatus('sucai', '已批量生成 ' + arr.length + ' 条素材并置顶，可点「💾 保存到项目文件夹」写入 data/sucai.js。');
@@ -890,7 +881,8 @@
           return { id: 'ocg' + Date.now() + Math.floor(Math.random() * 999), text: String(it.text || ''), source: String(it.source || 'AI 检索'), theme: String(it.theme || '自定义'), checked: true, custom: true, ai: true };
         });
         state.geyan.items = added.concat(state.geyan.items);
-        state.geyan.expanded = true;
+        state.geyan.enabled = true;
+      state.geyan.expanded = true;
         save(); renderGeyan(); renderPreview();
       } catch (e) { setStatus('preview', '格言生成格式异常，跳过该步。'); }
       stepNext();
@@ -910,6 +902,7 @@
         stepNext(); return;
       }
       state.shici.items.unshift({ id: 'ocp' + Date.now() + Math.floor(Math.random() * 999), title: p.title || kw, author: p.author || '待核实', dynasty: p.dynasty || '', genre: p.genre || '', body: p.body, analysis: p.analysis || '', req: '', checked: true, custom: true, ai: true });
+      state.shici.enabled = true;
       state.shici.expanded = true;
       save(); renderShici(); renderPreview();
       stepNext();
@@ -936,7 +929,8 @@
           });
           state.sucai.items = added.concat(state.sucai.items);
           recordUsed(added.map(function (x) { return x.title; }).concat(fresh.slice(0, n).map(function (x) { return x.title; })));
-          state.sucai.expanded = true;
+          state.sucai.enabled = true;
+      state.sucai.expanded = true;
           save(); renderSucai(); renderPreview();
           setStatus('preview', '✓ 一键生成完成：格言 5 + 诗词 1 + 素材 ' + added.length + '，已全部置顶并勾选，可在各卡片继续编辑选择。');
         } catch (e) { setStatus('preview', '素材生成格式异常，可稍后手动重试。'); }
@@ -951,19 +945,11 @@
     save(); renderAll();
     setStatus('preview', '已取消全部选择。');
   }
-  function showDone(summary) {
-    var ov = $('#done-overlay');
-    if (!ov) return;
-    var sm = $('#done-summary');
-    if (sm) sm.textContent = summary;
-    ov.classList.add('show');
-    clearTimeout(ov._t);
-    ov._t = setTimeout(function () { ov.classList.remove('show'); }, 4000);
-  }
   function oneClickGenerate() {
     if (!state.settings.apiKey) { setStatus('preview', '一键生成需要 API Key：点右上角「设置」填入后重试。'); return; }
+    state.geyan.enabled = state.shici.enabled = state.sucai.enabled = true;
     setStatus('preview', '一键生成开始（约 30~60 秒）…');
-    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); showDone('格言 5 条 · 诗词 1 首 · 素材 5 条，已置顶并自动勾选'); var pv = $('#card-preview'); if (pv && pv.scrollIntoView) pv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); });
+    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); var pv = $('#card-preview'); if (pv && pv.scrollIntoView) pv.scrollIntoView({ behavior: 'smooth', block: 'start' }); setStatus('preview', '✓ 一键生成完成：11 项已置顶并自动勾选，素材本已更新。'); }); }); });
   }
 
   /* ---------- 事件：静态控件 ---------- */
@@ -971,7 +957,6 @@
     var t = function (id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); };
     t('#oneclick', oneClickGenerate);
     t('#uncheck-all', uncheckAll);
-    t('#done-close', function () { var ov = $('#done-overlay'); if (ov) ov.classList.remove('show'); });
     t('#settings-open', openSettings);
     t('#settings-close', closeSettings);
     t('#settings-save', saveSettings);
