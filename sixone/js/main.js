@@ -963,7 +963,7 @@
   function oneClickGenerate() {
     if (!state.settings.apiKey) { setStatus('preview', '一键生成需要 API Key：点右上角「设置」填入后重试。'); return; }
     setStatus('preview', '一键生成开始（约 30~60 秒）…');
-    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); scrollToTop('geyan'); showDone('格言 5 条 · 诗词 1 首 · 素材 5 条，已置顶并自动勾选'); }); }); });
+    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); showDone('格言 5 条 · 诗词 1 首 · 素材 5 条，已置顶并自动勾选'); var pv = $('#card-preview'); if (pv && pv.scrollIntoView) pv.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); }); });
   }
 
   /* ---------- 事件：静态控件 ---------- */
