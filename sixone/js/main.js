@@ -34,6 +34,7 @@
   function defaultState() {
     return {
       deletedIds: [],
+      usedTitles: [],
       meta: { name: '', date: todayStr() },
       settings: { apiKey: '', model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com' },
       geyan: { enabled: true, expanded: true, target: 5, filter: '全部', items: mapItems('geyan') },
@@ -52,6 +53,7 @@
         var base = defaultState();
         var merged = Object.assign({}, base, saved);
         merged.deletedIds = Array.isArray(saved.deletedIds) ? saved.deletedIds : [];
+        merged.usedTitles = Array.isArray(saved.usedTitles) ? saved.usedTitles : [];
         merged.settings = Object.assign({}, base.settings, saved.settings || {});
         merged.meta = Object.assign({}, base.meta, saved.meta || {});
         ['geyan', 'shici', 'meiwen', 'sucai'].forEach(function (k) {
@@ -433,7 +435,7 @@
     ], function (text) {
       var p = parseShici(text);
       if (!p.body || p.body.indexOf('无法确认原文') >= 0) { setStatus('shici', 'AI 未能逐字确认该作品原文（已拒绝输出），请换个关键词或自行粘贴权威版本原文。返回内容：' + text.slice(0, 200)); return; }
-      state.shici.items.push({
+      state.shici.items.unshift({
         id: 'ai' + Date.now() + Math.floor(Math.random() * 999),
         title: p.title || kw,
         author: p.author || '待核实',
@@ -479,6 +481,7 @@
       var m4 = text.match(/【分析】\s*([\s\S]+)$/);
       if (m4) analysis = m4[1].trim();
       state.sucai.items.unshift({ id: 'ai' + Date.now() + Math.floor(Math.random() * 999), title: title || 'AI 素材', summary: summary, category: '自定义', date: todayStr(), source: 'AI 分析（基于粘贴内容）', link: '', analysis: analysis, checked: true, custom: true, ai: true });
+      recordUsed([title]);
       state.sucai.expanded = true;
       save(); renderSucai(); renderPreview();
       scrollToTop('sucai');
@@ -614,12 +617,32 @@
     if (s >= 0 && e > s) t = t.slice(s, e + 1);
     return JSON.parse(t);
   }
+  function normTitle(t) { return String(t || '').replace(/\s+/g, '').toLowerCase(); }
+  function recordUsed(titles) {
+    titles.forEach(function (t) {
+      var n = normTitle(t);
+      if (n && state.usedTitles.indexOf(n) < 0) state.usedTitles.push(n);
+    });
+    if (state.usedTitles.length > 300) state.usedTitles = state.usedTitles.slice(-300);
+  }
+  function filterUsed(list) {
+    var have = {};
+    state.sucai.items.forEach(function (it) { have[normTitle(it.title)] = true; });
+    return list.filter(function (x) {
+      var n = normTitle(x.title);
+      return n && state.usedTitles.indexOf(n) < 0 && !have[n];
+    });
+  }
   function refreshSucai() {
     if (!state.settings.apiKey) { setStatus('sucai', '一键更新需要 API Key：点右上角「设置」填入（Key 仅存本机浏览器）。'); return; }
     var n = state.sucai.updateCount || 5;
     setStatus('sucai', '正在抓取今日热点并生成素材（约 10~30 秒，单次成本不足 1 分钱）…');
     fetchHotTopics().then(function (list) {
       if (!list || !list.length) { setStatus('sucai', '热榜接口不可用（file:// 跨域限制），请手动粘贴新闻后点「AI 写分析」。'); return; }
+      var before = list.length;
+      list = filterUsed(list);
+      if (!list.length) { setStatus('sucai', '近期热点都已生成过（已记录 ' + state.usedTitles.length + ' 条历史），可稍后再试或手动粘贴新内容。'); return; }
+      if (list.length < before) setStatus('sucai', '已排除 ' + (before - list.length) + ' 条生成过的热点，继续…');
       var tMin = state.sucai.titleMin || 10, tMax = state.sucai.titleMax || 20, aLen = state.sucai.analysisLen || 75;
       var top = list.slice(0, 30).map(function (x, i) { return (i + 1) + '. ' + x.title; }).join('\n');
       callDeepSeek([
@@ -644,6 +667,7 @@
             });
           });
           state.sucai.items = added.concat(state.sucai.items);
+          recordUsed(added.map(function (x) { return x.title; }).concat(list.map(function (x) { return x.title; })));
           state.sucai.expanded = true;
           save(); renderSucai(); renderPreview();
           scrollToTop('sucai');
@@ -706,6 +730,8 @@
     var tMin = +state.sucai.titleMin || 10, tMax = +state.sucai.titleMax || 20;
     var aLen = +state.sucai.analysisLen || 75;
     setStatus('sucai', '批量生成 ' + items.length + ' 条素材中…');
+    items = filterUsed(items);
+    if (!items.length) { setStatus('sucai', '所选热点都已生成过，请换一批或稍后再试。'); return; }
     var lines = items.map(function (it, i) { return (i + 1) + '.【' + it.date + '】【' + it.source + '】' + it.title; }).join('\n');
     callDeepSeek([
       { role: 'system', content: '你是高考作文素材库主编。请把下列新闻条目改写为作文素材，只输出一个 JSON 数组（不要其它文字），每项：{"title":"标题' + tMin + '~' + tMax + '字","summary":"梗概约30字含六要素（时间/地点/人物/起因/经过/结果）","analysis":"约' + aLen + '字议论性分析，可直接入文","date":"用条目给出的日期","source":"用条目给出的来源"}。严禁编造，只能基于给定条目。\n条目：\n' + lines },
@@ -730,6 +756,7 @@
           });
         });
         state.sucai.items = added.concat(state.sucai.items);
+        recordUsed(added.map(function (x) { return x.title; }).concat(items.map(function (x) { return x.title; })));
         state.sucai.expanded = true;
         save(); renderSucai(); renderPreview();
         scrollToTop('sucai');
@@ -844,9 +871,85 @@
     $('#settings-status').textContent = '已清空 API Key。';
   }
 
+  /* ---------- 一键生成（格言5 + 诗词1 + 素材5） ---------- */
+  function oneClickQuotes(stepNext) {
+    var n = 5;
+    setStatus('preview', '一键生成 1/3：正在生成 5 条不同类型格言…');
+    callDeepSeek([
+      { role: 'system', content: '你是高考语文格言库检索员。请给出 ' + n + ' 条真实存在的格言/名句（严禁编造），要求：分属 5 种不同主题（立志/坚持/家国/修身/创新/逆境等，尽量多样），著名但不来自小学/初中/高中课本与高考必背篇目，高中生课内较少接触。只输出一个 JSON 数组，每项：{"text":"句子","source":"作者《篇目》","theme":"适用主题"}。' },
+      { role: 'user', content: '请生成 ' + n + ' 条不同类型格言。' }
+    ], function (text) {
+      try {
+        var arr = extractJsonArray(text);
+        if (!Array.isArray(arr) || !arr.length) throw new Error('not-array');
+        var added = arr.slice(0, n).map(function (it) {
+          return { id: 'ocg' + Date.now() + Math.floor(Math.random() * 999), text: String(it.text || ''), source: String(it.source || 'AI 检索'), theme: String(it.theme || '自定义'), checked: true, custom: true, ai: true };
+        });
+        state.geyan.items = added.concat(state.geyan.items);
+        state.geyan.expanded = true;
+        save(); renderGeyan(); renderPreview();
+      } catch (e) { setStatus('preview', '格言生成格式异常，跳过该步。'); }
+      stepNext();
+    }, function () { setStatus('preview', '格言生成失败，跳过该步。'); stepNext(); });
+  }
+  function oneClickPoem(stepNext) {
+    setStatus('preview', '一键生成 2/3：正在检索 1 首真实诗词…');
+    var kw = SHICI_AUTHORS[Math.floor(Math.random() * SHICI_AUTHORS.length)] + ' ' + SHICI_THEMES[Math.floor(Math.random() * SHICI_THEMES.length)];
+    var maxLen = +state.shici.maxLen || 80, aLen = +state.shici.analysisLen || 150;
+    callDeepSeek([
+      { role: 'system', content: '你是高中语文诗词库检索员。根据关键词，提供一首真实存在的名家诗词（严禁创作、严禁编造），要求：著名但不来自小学/初中/高中语文课本与高考必背篇目。**【正文】必须是通行版本原文，逐字一致，严禁改动、润色、扩写或二次创作**；若无法确保逐字准确，请在【正文】第一行只输出"无法确认原文"并停止输出正文。按格式输出：【标题】…【作者】…【朝代】…【体裁】诗或词【正文】…（全文，不含标点与题目不超过 ' + maxLen + ' 字为宜）空行后【解析】约 ' + aLen + ' 字解析。' },
+      { role: 'user', content: '关键词：' + kw }
+    ], function (text) {
+      var p = parseShici(text);
+      if (!p.body || p.body.indexOf('无法确认原文') >= 0) {
+        setStatus('preview', '诗词未能逐字确认原文，已跳过（可单独用「🔍 AI 补充诗词」重试）。');
+        stepNext(); return;
+      }
+      state.shici.items.unshift({ id: 'ocp' + Date.now() + Math.floor(Math.random() * 999), title: p.title || kw, author: p.author || '待核实', dynasty: p.dynasty || '', genre: p.genre || '', body: p.body, analysis: p.analysis || '', req: '', checked: true, custom: true, ai: true });
+      state.shici.expanded = true;
+      save(); renderShici(); renderPreview();
+      stepNext();
+    }, function () { setStatus('preview', '诗词检索失败，跳过该步。'); stepNext(); });
+  }
+  function oneClickSucai(stepDone) {
+    setStatus('preview', '一键生成 3/3：正在生成 5 条一周内素材（联网搜索）…');
+    var n = 5;
+    fetchHotTopics().then(function (list) {
+      var fresh = filterUsed(list || []);
+      if (!fresh.length) { setStatus('preview', '没有未生成过的新热点（历史 ' + state.usedTitles.length + ' 条），可稍后再试。'); stepDone(); return; }
+      var tMin = state.sucai.titleMin || 10, tMax = state.sucai.titleMax || 20, aLen = state.sucai.analysisLen || 75;
+      var top = fresh.slice(0, 30).map(function (x, i) { return (i + 1) + '.【' + x.date + '】【' + x.source + '】' + x.title; }).join('\n');
+      callDeepSeek([
+        { role: 'system', content: '你是高考作文素材库主编。请从下列近一周新闻热点中挑选 ' + n + ' 条最适合作高考议论文素材的（政治/经济/文化/科技/社会），只输出 JSON 数组（不要其它文字），每项：{"title":"标题' + tMin + '~' + tMax + '字","category":"科技/经济/文化/社会/政策","summary":"梗概约30字含六要素","analysis":"约' + aLen + '字议论性分析","date":"用条目日期","source":"用条目来源"}。严禁编造。\n' + top },
+        { role: 'user', content: '生成 ' + n + ' 条素材' }
+      ], function (text) {
+        try {
+          var arr = extractJsonArray(text);
+          if (!Array.isArray(arr) || !arr.length) throw new Error('not-array');
+          var added = arr.slice(0, n).map(function (it, i) {
+            var src = fresh[i] || {};
+            return { id: 'oc' + Date.now() + Math.floor(Math.random() * 999), title: String(it.title || '').slice(0, 50), summary: String(it.summary || ''), category: String(it.category || '热点'), date: String(it.date || src.date || todayStr()), source: String(it.source || src.source || 'AI·热榜'), link: src.url || '', analysis: String(it.analysis || ''), checked: true, custom: true, ai: true };
+          });
+          state.sucai.items = added.concat(state.sucai.items);
+          recordUsed(added.map(function (x) { return x.title; }).concat(fresh.slice(0, n).map(function (x) { return x.title; })));
+          state.sucai.expanded = true;
+          save(); renderSucai(); renderPreview();
+          setStatus('preview', '✓ 一键生成完成：格言 5 + 诗词 1 + 素材 ' + added.length + '，已全部置顶并勾选，可在各卡片继续编辑选择。');
+        } catch (e) { setStatus('preview', '素材生成格式异常，可稍后手动重试。'); }
+        stepDone();
+      }, function () { setStatus('preview', '素材生成失败。'); stepDone(); });
+    });
+  }
+  function oneClickGenerate() {
+    if (!state.settings.apiKey) { setStatus('preview', '一键生成需要 API Key：点右上角「设置」填入后重试。'); return; }
+    setStatus('preview', '一键生成开始（约 30~60 秒）…');
+    oneClickQuotes(function () { oneClickPoem(function () { oneClickSucai(function () { renderAll(); scrollToTop('geyan'); }); }); });
+  }
+
   /* ---------- 事件：静态控件 ---------- */
   function attachStaticEvents() {
     var t = function (id, fn) { var el = $(id); if (el) el.addEventListener('click', fn); };
+    t('#oneclick', oneClickGenerate);
     t('#settings-open', openSettings);
     t('#settings-close', closeSettings);
     t('#settings-save', saveSettings);

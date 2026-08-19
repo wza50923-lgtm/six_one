@@ -118,3 +118,34 @@ textarea{margin-top:8px}
 .hot-t{flex:1;min-width:0}
 .hot-meta{color:var(--sub);font-size:11px;white-space:nowrap;flex:none}
 .hotbar{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+
+/* ---- 手机/平板适配 ---- */
+@media (max-width:640px){
+  .top-inner{flex-direction:column;align-items:stretch;gap:8px}
+  .top h1{font-size:17px}
+  .meta-row{flex-wrap:wrap}
+  .meta-row .in{flex:1;min-width:0}
+  .btn-row{width:100%}
+  .btn{flex:1;min-width:44px;text-align:center;padding:8px 6px}
+  .wrap{padding:0 10px;margin:12px auto 40px;gap:10px}
+  .card-head{flex-wrap:wrap;gap:8px;padding:12px}
+  .card-title{flex:1;min-width:0;font-size:15px}
+  .card-body{padding:2px 12px 12px}
+  .opts{flex-direction:column;align-items:stretch;gap:8px}
+  .opts label{justify-content:space-between}
+  textarea,input.in,select{font-size:16px}
+  .row2{flex-wrap:wrap}
+  .row2 .in{width:100%}
+  .hot-item{flex-wrap:wrap}
+  .hot-meta{white-space:normal;width:100%;padding-left:24px}
+  .hotbar{flex-direction:column;align-items:stretch}
+  .hotbar .btn{width:100%}
+  .preview{padding:14px 12px;font-size:14px}
+  .modal-box{padding:14px;max-height:92vh}
+  .foot{flex-direction:column;gap:6px;align-items:flex-start}
+}
+@media (min-width:641px) and (max-width:1024px){
+  .wrap{max-width:96vw}
+  .card-body{font-size:15px}
+  .btn{padding:8px 12px}
+}
